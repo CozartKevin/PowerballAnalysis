@@ -23,4 +23,5 @@
 This is a **curiosity-driven project**, not intended as a polished data science portfolio piece. The focus is on learning Python workflows and experimenting with real-world data.
 
 ## Acknowledgements
-Guidance and suggestions provided by ChatGPT.
+[Data obtained from Data.gov](https://catalog.data.gov/dataset/lottery-powerball-winning-numbers-beginning-2010)
+Guidance and suggestions provided by ChatGPT
