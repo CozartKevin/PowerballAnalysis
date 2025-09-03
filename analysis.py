@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns #Only used in showoff section
 import itertools
 import random
+import os
+from pathlib import Path
 
 # Load CSV from data folder 
 df = pd.read_csv("data/powerball_Post_Oct_2015.csv")
@@ -173,13 +175,28 @@ df.columns = df.columns.str.strip()
 
 # Letting chatGPT Showoff how it would address this data. 
 
+
+# -------------------------
+# Directories for outputs
+# -------------------------
+charts_dir = Path("outputs") / "charts"
+csv_dir = Path("outputs") / "csv"
+charts_dir.mkdir(parents=True, exist_ok=True)
+csv_dir.mkdir(parents=True, exist_ok=True)
+
 # Define columns
 main_balls = ['Ball 1', 'Ball 2', 'Ball 3', 'Ball 4', 'Ball 5']
 all_balls = main_balls + ['Powerball']
 
 # Ensure all numbers are included
-ball_ranges = { 'Powerball': range(1, 27), 'Ball 1': range(1, 70), 'Ball 2': range(1, 70),
-                'Ball 3': range(1, 70), 'Ball 4': range(1, 70), 'Ball 5': range(1, 70) }
+ball_ranges = {
+    'Powerball': range(1, 27),
+    'Ball 1': range(1, 70),
+    'Ball 2': range(1, 70),
+    'Ball 3': range(1, 70),
+    'Ball 4': range(1, 70),
+    'Ball 5': range(1, 70)
+}
 
 # -------------------------
 # 1️⃣ Frequency per ball
@@ -189,23 +206,23 @@ axes = axes.flatten()
 
 for i, col in enumerate(all_balls):
     counts = df[col].value_counts().sort_index()
-    counts = counts.reindex(ball_ranges[col], fill_value=0)  # fill missing numbers with 0
+    counts = counts.reindex(ball_ranges[col], fill_value=0)
 
     counts.plot(kind='bar', ax=axes[i], width=0.6, color='skyblue')
     axes[i].set_title(f'{col} Number Frequencies')
     axes[i].set_xlabel('Number')
     axes[i].set_ylabel('Occurrences')
     axes[i].set_xticklabels(counts.index, rotation=90, fontsize=6)
-    
-    # Add value labels on top of bars
+
     for j, value in enumerate(counts):
         axes[i].text(j, value + 0.5, str(value), ha='center', va='bottom', fontsize=5)
-    
+
     axes[i].set_ylim(0, counts.max() * 1.1)
 
 fig.suptitle("Powerball Number Frequencies (Post-Oct 2015)", fontsize=16)
 fig.set_constrained_layout(True)
 plt.show()
+fig.savefig(charts_dir / "per_ball_frequencies.png", dpi=300)
 
 # -------------------------
 # 2️⃣ Overall frequency (all main balls combined)
@@ -219,29 +236,31 @@ plt.title("Overall Frequency Across All 5 Main Balls")
 plt.xlabel("Number")
 plt.ylabel("Occurrences")
 plt.xticks(rotation=90, fontsize=6)
-
-# Add counts above bars
 for j, value in enumerate(overall_counts):
     plt.text(j, value + 0.5, str(value), ha='center', va='bottom', fontsize=5)
 plt.ylim(0, overall_counts.max() * 1.1)
+plt.savefig(charts_dir / "overall_main_ball_frequency.png", dpi=300)
 plt.show()
+
 
 # -------------------------
 # 3️⃣ Correlation analysis (main balls)
 # -------------------------
 corr_matrix = df[main_balls].corr()
-
 plt.figure(figsize=(8,6))
 sns.heatmap(corr_matrix, annot=True, cmap="coolwarm", fmt=".2f")
 plt.title("Correlation Matrix: Main Balls")
+plt.savefig(charts_dir / "main_balls_correlation.png", dpi=300)
 plt.show()
 
-# Correlation with Powerball (optional)
+
 corr_with_pb = df[main_balls + ['Powerball']].corr()
 plt.figure(figsize=(8,6))
 sns.heatmap(corr_with_pb, annot=True, cmap="coolwarm", fmt=".2f")
 plt.title("Correlation Matrix: Main Balls + Powerball")
+plt.savefig(charts_dir / "main_balls_powerball_correlation.png", dpi=300)
 plt.show()
+
 
 # -------------------------
 # 4️⃣ Distribution: Sum of main balls
@@ -252,36 +271,39 @@ sns.histplot(df['Sum_Main'], bins=30, kde=False, color='purple')
 plt.title("Distribution of Sum of Main Balls")
 plt.xlabel("Sum of 5 Main Balls")
 plt.ylabel("Occurrences")
+plt.savefig(charts_dir / "sum_main_distribution.png", dpi=300)
 plt.show()
+
 
 # -------------------------
 # 5️⃣ Distribution: Even/Odd count per draw
 # -------------------------
 df['Even_Count'] = df[main_balls].apply(lambda x: sum(n % 2 == 0 for n in x), axis=1)
 even_counts = df['Even_Count'].value_counts().sort_index()
-
 plt.figure(figsize=(10,6))
 even_counts.plot(kind='bar', color='teal', width=0.6)
 plt.title("Distribution of Even Numbers per Draw (5 Main Balls)")
 plt.xlabel("Count of Even Numbers")
 plt.ylabel("Occurrences")
 plt.xticks(rotation=0)
+plt.savefig(charts_dir / "even_count_distribution.png", dpi=300)
 plt.show()
+
 
 # -------------------------
 # 6️⃣ Distribution: High/Low count per draw
-# High = 36-69, Low = 1-35
 # -------------------------
 df['High_Count'] = df[main_balls].apply(lambda x: sum(n >= 36 for n in x), axis=1)
 high_counts = df['High_Count'].value_counts().sort_index()
-
 plt.figure(figsize=(10,6))
 high_counts.plot(kind='bar', color='orange', width=0.6)
 plt.title("Distribution of High Numbers per Draw (5 Main Balls)")
 plt.xlabel("Count of High Numbers (36-69)")
 plt.ylabel("Occurrences")
 plt.xticks(rotation=0)
+plt.savefig(charts_dir / "high_count_distribution.png", dpi=300)
 plt.show()
+
 
 # -------------------------
 # 7️⃣ Insights / Highlights
@@ -293,26 +315,17 @@ for col in all_balls:
     never_drawn = counts[counts == 0].index.tolist()
     print(f"{col}: Most frequent number: {top_num} ({top_val} times), Never drawn: {never_drawn}")
 
-
 # -------------------------
-# 8️⃣+9️⃣ Top Numbers Highlight
+# 8️⃣+9️⃣ Top Numbers Highlight Charts
 # -------------------------
-
-columns = all_balls  # ['Ball 1', 'Ball 2', 'Ball 3', 'Ball 4', 'Ball 5', 'Powerball']
-
-# --- Per-ball top 5 highlight charts ---
 fig, axes = plt.subplots(2, 3, figsize=(20,10))
 axes = axes.flatten()
 
-for i, col in enumerate(columns):
+for i, col in enumerate(all_balls):
     counts = df[col].value_counts().sort_index()
-    if col == 'Powerball':
-        full_range = range(1,27)
-    else:
-        full_range = range(1,70)
+    full_range = range(1,27) if col=='Powerball' else range(1,70)
     counts = counts.reindex(full_range, fill_value=0)
 
-    # Identify top 5 most frequent numbers
     top5 = counts.nlargest(5).index.tolist()
     colors = ['orange' if n in top5 else 'skyblue' for n in counts.index]
 
@@ -322,20 +335,20 @@ for i, col in enumerate(columns):
     axes[i].set_ylabel('Occurrences')
     axes[i].set_xticklabels(counts.index, rotation=90, fontsize=6)
 
-    # Annotate counts above bars
     for j, value in enumerate(counts):
         axes[i].text(j, value + 0.5, str(value), ha='center', va='bottom', fontsize=5)
-    
+
     axes[i].set_ylim(0, counts.max() * 1.1)
 
 fig.suptitle("Per-Ball Number Frequencies with Top 5 Highlighted", fontsize=16)
 fig.set_constrained_layout(True)
+fig.savefig(charts_dir / "per_ball_top5_highlighted.png", dpi=300)
 plt.show()
-fig.savefig("per_ball_top5_highlighted.png", dpi=300)  # ✅ Save chart
 
-# --- Overall Top Numbers Charts ---
 
-# Top 20 Main Numbers (Horizontal Bar)
+# -------------------------
+# Overall Top Numbers
+# -------------------------
 all_main_values = pd.concat([df[ball] for ball in main_balls])
 overall_counts = all_main_values.value_counts().sort_index()
 top_20_main = overall_counts.nlargest(20)
@@ -348,9 +361,8 @@ ax.set_ylabel("Number")
 for i, value in enumerate(top_20_main.sort_values()):
     ax.text(value + 0.5, i, str(value), va='center', fontsize=8)
 plt.show()
-fig.savefig("top_20_main_numbers.png", dpi=300)  # ✅ Save chart
+fig.savefig(charts_dir / "top_20_main_numbers.png", dpi=300)
 
-# Top 5 Powerball Numbers (Vertical Bar)
 powerball_counts = df['Powerball'].value_counts().sort_index()
 top_5_powerball = powerball_counts.nlargest(5)
 
@@ -363,16 +375,10 @@ ax.set_xticklabels(top_5_powerball.index, rotation=0, fontsize=10)
 for i, value in enumerate(top_5_powerball):
     ax.text(i, value + 0.5, str(value), ha='center', va='bottom', fontsize=8)
 plt.show()
-fig.savefig("top_5_powerball_numbers.png", dpi=300)  # ✅ Save chart
+fig.savefig(charts_dir / "top_5_powerball_numbers.png", dpi=300)
 
-
-
-
-
-
-#####  Interesting information
 # -------------------------
-# Frequency distributions and weights
+# 10️⃣ Suggested Combinations (Optimized)
 # -------------------------
 all_main_values = pd.concat([df[ball] for ball in main_balls])
 overall_counts = all_main_values.value_counts().sort_index().reindex(range(1,70), fill_value=0)
@@ -385,15 +391,13 @@ power_weights = powerball_counts / powerball_counts.sum()
 top_20_main = overall_counts.nlargest(20).index.tolist()
 top_5_powerball = powerball_counts.nlargest(5).index.tolist()
 
-# -------------------------
-# Co-occurrence matrices
-# -------------------------
+# Co-occurrence
 co_occurrence = pd.DataFrame(0, index=range(1,70), columns=range(1,70))
 for draw in df[main_balls].values:
     for a,b in itertools.combinations(draw,2):
         co_occurrence.at[a,b] += 1
         co_occurrence.at[b,a] += 1
-co_occurrence = co_occurrence / co_occurrence.values.max()
+co_occurrence /= co_occurrence.values.max()
 
 triple_occurrence = {}
 for draw in df[main_balls].values:
@@ -403,100 +407,76 @@ max_triple = max(triple_occurrence.values()) if triple_occurrence else 1
 for k in triple_occurrence:
     triple_occurrence[k] /= max_triple
 
-# -------------------------
-# Even/Odd and High/Low distributions
-# -------------------------
-df['Even_Count'] = df[main_balls].apply(lambda x: sum(n%2==0 for n in x), axis=1)
-df['High_Count'] = df[main_balls].apply(lambda x: sum(n>=36 for n in x), axis=1)
 even_dist = df['Even_Count'].value_counts(normalize=True).sort_index()
 high_dist = df['High_Count'].value_counts(normalize=True).sort_index()
-
-# Sum statistics
-df['Sum_Main'] = df[main_balls].sum(axis=1)
 sum_mean = df['Sum_Main'].mean()
 sum_std = df['Sum_Main'].std()
 
-# -------------------------
-# --- Suggested Combination (Optimized + Top Number Weight Multiplier + Large Pool) ---
-# -------------------------
-num_combinations = 300  # generate large pool
+# Suggested combinations
+num_combinations = 500
 suggested_combinations = []
-
-# Multipliers
 top_main_multiplier = 1.2
 top_power_multiplier = 1.3
 
 for _ in range(num_combinations):
-    # Step 1: Sample target even/high counts
     target_even = random.choices(even_dist.index, weights=even_dist.values)[0]
     target_high = random.choices(high_dist.index, weights=high_dist.values)[0]
-
-    # Step 2: Select 1–3 top numbers
     num_top = random.choice([1,2,3])
     top_selected = random.sample(top_20_main, num_top)
-
-    # Step 3: Sample remaining numbers weighted by frequency
     remaining_pool = [n for n in range(1,70) if n not in top_selected]
-    remaining_weights = main_weights[remaining_pool]
-    remaining_weights = remaining_weights / remaining_weights.sum()
-    remaining_selected = random.choices(
-        remaining_pool,
-        weights=remaining_weights,
-        k=5-num_top
-    )
+    remaining_weights = main_weights[remaining_pool] / main_weights[remaining_pool].sum()
+    remaining_selected = random.choices(remaining_pool, weights=remaining_weights, k=5-num_top)
     main_nums = top_selected + remaining_selected
 
-    # Step 4: Adjust even/odd
+    # Adjust even/odd
     even_count = sum(n % 2 == 0 for n in main_nums)
     diff_even = target_even - even_count
-    if diff_even != 0:
-        for _ in range(abs(diff_even)):
-            if diff_even > 0:
-                odd_numbers = [n for n in main_nums if n % 2 == 1]
-                if odd_numbers:
-                    idx = main_nums.index(random.choice(odd_numbers))
-                    candidate = random.choices(
-                        [n for n in remaining_pool if n % 2 == 0 and n not in main_nums],
-                        weights=[main_weights[n] for n in remaining_pool if n % 2 == 0 and n not in main_nums]
-                    )[0]
-                    main_nums[idx] = candidate
-            else:
-                even_numbers = [n for n in main_nums if n % 2 == 0]
-                if even_numbers:
-                    idx = main_nums.index(random.choice(even_numbers))
-                    candidate = random.choices(
-                        [n for n in remaining_pool if n % 2 == 1 and n not in main_nums],
-                        weights=[main_weights[n] for n in remaining_pool if n % 2 == 1 and n not in main_nums]
-                    )[0]
-                    main_nums[idx] = candidate
+    for _ in range(abs(diff_even)):
+        if diff_even > 0:
+            odd_numbers = [n for n in main_nums if n % 2 == 1]
+            if odd_numbers:
+                idx = main_nums.index(random.choice(odd_numbers))
+                candidate = random.choices(
+                    [n for n in remaining_pool if n % 2 == 0 and n not in main_nums],
+                    weights=[main_weights[n] for n in remaining_pool if n % 2 == 0 and n not in main_nums]
+                )[0]
+                main_nums[idx] = candidate
+        elif diff_even < 0:
+            even_numbers = [n for n in main_nums if n % 2 == 0]
+            if even_numbers:
+                idx = main_nums.index(random.choice(even_numbers))
+                candidate = random.choices(
+                    [n for n in remaining_pool if n % 2 == 1 and n not in main_nums],
+                    weights=[main_weights[n] for n in remaining_pool if n % 2 == 1 and n not in main_nums]
+                )[0]
+                main_nums[idx] = candidate
 
-    # Step 5: Adjust high/low
+    # Adjust high/low
     high_count = sum(n >= 36 for n in main_nums)
     diff_high = target_high - high_count
-    if diff_high != 0:
-        for _ in range(abs(diff_high)):
-            if diff_high > 0:
-                low_numbers = [n for n in main_nums if n <= 35]
-                if low_numbers:
-                    idx = main_nums.index(random.choice(low_numbers))
-                    candidate = random.choices(
-                        [n for n in remaining_pool if n >= 36 and n not in main_nums],
-                        weights=[main_weights[n] for n in remaining_pool if n >= 36 and n not in main_nums]
-                    )[0]
-                    main_nums[idx] = candidate
-            else:
-                high_numbers = [n for n in main_nums if n >= 36]
-                if high_numbers:
-                    idx = main_nums.index(random.choice(high_numbers))
-                    candidate = random.choices(
-                        [n for n in remaining_pool if n <= 35 and n not in main_nums],
-                        weights=[main_weights[n] for n in remaining_pool if n <= 35 and n not in main_nums]
-                    )[0]
-                    main_nums[idx] = candidate
+    for _ in range(abs(diff_high)):
+        if diff_high > 0:
+            low_numbers = [n for n in main_nums if n <= 35]
+            if low_numbers:
+                idx = main_nums.index(random.choice(low_numbers))
+                candidate = random.choices(
+                    [n for n in remaining_pool if n >= 36 and n not in main_nums],
+                    weights=[main_weights[n] for n in remaining_pool if n >= 36 and n not in main_nums]
+                )[0]
+                main_nums[idx] = candidate
+        elif diff_high < 0:
+            high_numbers = [n for n in main_nums if n >= 36]
+            if high_numbers:
+                idx = main_nums.index(random.choice(high_numbers))
+                candidate = random.choices(
+                    [n for n in remaining_pool if n <= 35 and n not in main_nums],
+                    weights=[main_weights[n] for n in remaining_pool if n <= 35 and n not in main_nums]
+                )[0]
+                main_nums[idx] = candidate
 
     main_nums = sorted(main_nums)
 
-    # Step 6: Adjust sum within ±1 std
+    # Adjust sum within ±1 std
     total_sum = sum(main_nums)
     if abs(total_sum - sum_mean) > sum_std:
         adjust_idx = random.randint(0,4)
@@ -506,42 +486,32 @@ for _ in range(num_combinations):
         main_nums[adjust_idx] = new_val
         main_nums = sorted(main_nums)
 
-    # Step 7: Pick Powerball weighted by frequency
+    # Powerball
     power_num = random.choices(top_5_powerball, weights=[power_weights[n] for n in top_5_powerball])[0]
 
-    # Step 8: Score combination with multipliers
-    score = 0
-    for n in main_nums:
-        score += main_weights[n] * (top_main_multiplier if n in top_20_main else 1)
+    # Score
+    score = sum(main_weights[n] * (top_main_multiplier if n in top_20_main else 1) for n in main_nums)
     score += power_weights[power_num] * (top_power_multiplier if power_num in top_5_powerball else 1)
-
-    # Pair co-occurrence
-    for a, b in itertools.combinations(main_nums, 2):
+    for a,b in itertools.combinations(main_nums,2):
         score += co_occurrence.at[a,b]
-    # Triple co-occurrence
-    for triple in itertools.combinations(main_nums, 3):
-        triple_sorted = tuple(sorted(triple))
-        score += triple_occurrence.get(triple_sorted, 0)
+    for triple in itertools.combinations(main_nums,3):
+        score += triple_occurrence.get(tuple(sorted(triple)),0)
 
     suggested_combinations.append({'main': main_nums, 'power': power_num, 'score': score})
 
-# Step 9: Sort by score descending
+# Top 10
 suggested_combinations = sorted(suggested_combinations, key=lambda x: x['score'], reverse=True)
-
-# Step 10: Keep top 10 only
 top_suggested = suggested_combinations[:10]
 
-# Step 11: Convert to DataFrame
 suggested_df = pd.DataFrame(
     [c['main'] + [c['power']] for c in top_suggested],
     columns=[f'Ball {i+1}' for i in range(5)] + ['Powerball']
 )
 
-# Display top 10
 print("\n🎯 Top 10 Suggested Combinations:")
 print(suggested_df)
 
-# Heatmap for top 10
+# Heatmap
 plt.figure(figsize=(12,6))
 sns.heatmap(suggested_df, annot=True, fmt="d",
             cmap="YlGnBu", cbar=True, linewidths=0.5, linecolor='gray')
@@ -549,8 +519,9 @@ plt.title("Top 10 Optimized Powerball Combinations", fontsize=16)
 plt.ylabel("Combination #")
 plt.xlabel("Ball")
 plt.yticks(rotation=0)
+plt.savefig(charts_dir / "suggested_combinations_top10_heatmap.png", dpi=300)
 plt.show()
 
-# Save top 10
-suggested_df.to_csv("suggested_combinations_top10.csv", index=False)
-plt.savefig("suggested_combinations_top10_heatmap.png", dpi=300, bbox_inches='tight')
+
+# Save CSV
+suggested_df.to_csv(csv_dir / "suggested_combinations_top10.csv", index=False)
